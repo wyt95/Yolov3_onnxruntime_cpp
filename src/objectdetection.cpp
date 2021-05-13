@@ -290,7 +290,6 @@ bool Yolov3::preProcessing(const cv::Mat &inputImg)
             for (auto dims : it)
             {
                 input_tensor_size *= dims;
-                //std::cout << "dims: " << dims << std::endl;
             }
         }
         input_image_.resize(input_tensor_size);
@@ -430,12 +429,6 @@ bool Yolov3::postProcessing()
             auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
             size_t tensor_size = tensor_info.GetElementCount();
             std::vector<int64_t>  output_dims = tensor_info.GetShape();
-            printf("output_dims shape: ");
-            for(auto it : output_dims)
-            {
-                printf("  %ld  ", it);
-            }
-            printf("\n");
 
             float* inputTensor = tensor.GetTensorMutableData<float>();
             float* outputTensor = (float*)malloc(tensor_size * sizeof(float));
@@ -503,10 +496,6 @@ bool Yolov3::postProcessing()
                             }
                         }
 
-                        // std::vector<float> classporb{ptr+4, ptr+shape[3]};
-                        // auto maxValue = std::max_element(classporb.begin(), classporb.end());
-                        // auto maxclassPos = std::distance(std::begin(classporb), maxValue);
-
                         if (class_score < m_threshold)
                             continue;
 
@@ -565,7 +554,7 @@ bool Yolov3::postProcessing()
     return true;
 }
 
-bool Yolov3::DrowBoxes(cv::Mat &inputImg)
+bool Yolov3::DrowBoxes(cv::Mat &inputImg, const std::string image_name)
 {
     for (auto box : detections)
     {
@@ -574,14 +563,11 @@ bool Yolov3::DrowBoxes(cv::Mat &inputImg)
             w = box.w,
             h = box.h,
             clspos = box.classpos;
-        std::cout << "x, y, w, h, clspos: " << box.x << " " << box.y << " " << box.w << " " << box.h << " " << box.classpos << std::endl;
-        std::cout << "prob: " << box.prob << std::endl;
         cv::Rect rect = { x, y, w, h };
         cv::rectangle(inputImg, rect, cv::Scalar(0, 0, 255), 2);
         char boxProb[64] = "";
         sprintf(boxProb, "%.2f", box.prob);
         std::string category= m_Categories[box.classpos] + ":" + boxProb;
-        std::cout << "category: " << category << std::endl;
         cv::putText(inputImg,
                     category.c_str(),
                     cv::Point(box.x-3, box.y-6),
@@ -591,7 +577,8 @@ bool Yolov3::DrowBoxes(cv::Mat &inputImg)
                     1);
     }
 
-    cv::imwrite("./prdiect.jpg", inputImg);
+    std::string PicName = "../out/prdiect_" + image_name;
+    cv::imwrite(PicName.c_str(), inputImg);
 
     return true;
 }

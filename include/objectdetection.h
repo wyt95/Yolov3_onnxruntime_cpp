@@ -128,7 +128,7 @@ public:
     bool postProcessing();
 
     //draw boxes
-    bool DrowBoxes(cv::Mat &inputImg);
+    bool DrowBoxes(cv::Mat &inputImg, const std::string image_id);
 };
 
 #endif

@@ -1,24 +1,8 @@
 #include "objectdetection.h"
 #include <experimental/filesystem>
+#include <boost/filesystem.hpp>
 
 namespace fs = std::experimental::filesystem;
-
-template <typename T>
-static void softmax(T& input) {
-    float rowmax = *std::max_element(input.begin(), input.end());
-    std::vector<float> y(input.size());
-    
-    for (size_t i = 0; i != input.size(); ++i) {
-        /*sum += */y[i] = std::exp(input[i] /*- rowmax*/);
-    }
-
-    float sum = 0.0f;
-    for (size_t i = 0; i < input.size()/2; ++i) {
-        sum = y[i] + y[i + input.size()/2];
-        input[i] = y[i] / sum;
-        input[i + input.size()/2] = y[ i + input.size()/2] / sum;
-    }
-}
 
 int main(int argc, char** argv)
 {
@@ -27,19 +11,21 @@ int main(int argc, char** argv)
     Yolov3 *yolov3 = new Yolov3();
 
     std::cout << "yolov3 init()" << std::endl;
-    if ( !yolov3->init("/mnt/share/yolov3_onnx_pro-master/yolov3-ykx.onnx", "/mnt/share/yolov3_onnx_pro-master/coco_labels.txt", 608) )
+    if ( !yolov3->init("../model/yolov3-ykx.onnx", "../model/coco_labels.txt", 608) )
     {
         std::cout << "yolov3 init() failed...." << std::endl;
         return 0;
     }
 
-    std::cout << "yolov3 preProcessing...." << std::endl;
-    std::string AccurayFolderPath = "/mnt/share/yolov3_onnx_pro-master/yolov3_cpp/pic/";
+    std::string AccurayFolderPath = "../pic/";
     for (const auto &entry : fs::directory_iterator(AccurayFolderPath))
     {
         std::cout << entry.path() << std::endl;
 
         string image_id = entry.path().string();
+
+        boost::filesystem::path filePath(image_id);
+        cout << "filePath.filename(): " << filePath.filename() << endl;
 
         Mat img;
 
@@ -63,7 +49,7 @@ int main(int argc, char** argv)
             continue;
         }
 
-        if ( !yolov3->DrowBoxes(img) )
+        if ( !yolov3->DrowBoxes(img, filePath.filename().string()) )
         {
             std::cerr << "Yolov3 DrowBoxes() failed...." << '\n';
             continue;
