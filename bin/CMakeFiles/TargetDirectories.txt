@@ -1,3 +1,0 @@
-/mnt/share/yolov3_onnx_pro-master/yolov3_cpp/bin/CMakeFiles/rebuild_cache.dir
-/mnt/share/yolov3_onnx_pro-master/yolov3_cpp/bin/CMakeFiles/edit_cache.dir
-/mnt/share/yolov3_onnx_pro-master/yolov3_cpp/bin/CMakeFiles/demo.dir
