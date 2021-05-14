@@ -95,7 +95,7 @@ private:
     int m_OriMwidth;
     int m_OriMheight;
 
-    bool m_Isyolov3tiny;
+    //bool m_Isyolov3tiny;
     float m_threshold;
     float m_Nmsthreshold;
 

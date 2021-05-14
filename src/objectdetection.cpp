@@ -90,11 +90,11 @@ bool Yolov3::setOnnxRuntimeModelInputOutput(int input_size)
 
         // print input shapes/dims
         std::vector<int64_t> inputNode_dims = tensor_info.GetShape();
-        std::cout << "Input " << i << " : " << "num_dims = " << inputNode_dims.size() << std::endl;
-        for (int j = 0; j < inputNode_dims.size(); j++)
-        {
-            printf("Input %d : dim %d=%jd\n", i, j, inputNode_dims[j]);
-        }
+        // std::cout << "Input " << i << " : " << "num_dims = " << inputNode_dims.size() << std::endl;
+        // for (int j = 0; j < inputNode_dims.size(); j++)
+        // {
+        //     printf("Input %d : dim %d=%jd\n", i, j, inputNode_dims[j]);
+        // }
         input_node_dims.push_back(inputNode_dims);
     }
 
@@ -116,25 +116,19 @@ bool Yolov3::setOnnxRuntimeModelInputOutput(int input_size)
 
         // print output shapes/dims
         std::vector<int64_t> outputNode_dims = tensor_info.GetShape();
-        std::cout << "output " << i << " : " << "num_dims = " << outputNode_dims.size() << std::endl;
-        for (int j = 0; j < outputNode_dims.size(); j++)
-        {
-            printf("output %d : dim %d=%jd\n", i, j, outputNode_dims[j]);
-        }
+        // std::cout << "output " << i << " : " << "num_dims = " << outputNode_dims.size() << std::endl;
+        // for (int j = 0; j < outputNode_dims.size(); j++)
+        // {
+        //     printf("output %d : dim %d=%jd\n", i, j, outputNode_dims[j]);
+        // }
         output_node_dims.push_back(outputNode_dims);
 
         int batch_size = 1;
         int output_size = (input_size/32)*(pow(2,i));
-        if (m_Categories.size() > 0)
-        {
-            //NCHW
-            std::vector<int64_t> output_shape = { batch_size, 3*(5+(int)m_Categories.size()), output_size, output_size };
-            output_shapes.push_back(output_shape);
-        }
-        else
-        {
-            std::cerr << "m_Categories empty !!!" << '\n';
-        }
+        
+        //NCHW
+        std::vector<int64_t> output_shape = { batch_size, 3*(5+(int)m_Categories.size()), output_size, output_size };
+        output_shapes.push_back(output_shape);
     }
 
     return true;
@@ -172,6 +166,12 @@ bool Yolov3::GetLabelAndCategories(std::string labelFilePath)
         }
     }
     f_val_label.close();
+
+    if(m_Categories.empty())
+    {
+        std::cerr << "m_Categories empty!!" << '\n';
+        return false;
+    }
 
     cout << "m_Categories num:" << m_Categories.size() << endl;
 
@@ -221,7 +221,7 @@ bool Yolov3::init(const std::string modelPathOnnx, const std::string labelFilePa
                 m_sModelOnnxPath = modelPathOnnx;
                 m_iInput_w = input_size;
                 m_iInput_h = input_size;
-                m_Isyolov3tiny = Isyolov3tiny;
+                //m_Isyolov3tiny = Isyolov3tiny;
                 m_threshold = threshold;
                 m_Nmsthreshold = 0.5;
 
@@ -246,6 +246,21 @@ bool Yolov3::init(const std::string modelPathOnnx, const std::string labelFilePa
                 {
                     std::cerr << "setOnnxRuntimeModelInputOutput() failed!!" << '\n';
                     return false;
+                }
+
+                if (Isyolov3tiny)
+                {
+                    std::vector<std::vector<int> > yolo_masks{ {3, 4, 5}, {0, 1, 2} };
+                    std::vector<std::vector<int> > yolo_anchors{ {10,14}, {23,27}, {37,58}, {81,82}, {135,169}, {344,319} };
+                    yolo_masks_.assign(yolo_masks.begin(), yolo_masks.end());
+                    yolo_anchors_.assign(yolo_anchors.begin(), yolo_anchors.end());
+                }
+                else
+                {
+                    std::vector<std::vector<int> > yolo_masks{ {6, 7, 8}, {3, 4, 5}, {0, 1, 2} };
+                    std::vector<std::vector<int> > yolo_anchors{ {10,13}, {16,30}, {33,23}, {30,61}, {62,45}, {59,119}, {116,90}, {156,198}, {373,326} };
+                    yolo_masks_.assign(yolo_masks.begin(), yolo_masks.end());
+                    yolo_anchors_.assign(yolo_anchors.begin(), yolo_anchors.end());
                 }
 
                 m_bInit = true;
@@ -295,8 +310,6 @@ bool Yolov3::preProcessing(const cv::Mat &inputImg)
         input_image_.resize(input_tensor_size);
 
         float *data = input_image_.data();
-        fill(input_image_.begin(), input_image_.end(), 0.f);
-
         for (int c = 0; c < 3; c++) {
             for (int w = 0; w < m_iInput_w; w++) {
                 for (int h = 0; h < m_iInput_h; h++) {
@@ -346,8 +359,6 @@ bool Yolov3::runmodel()
                                                     output_node_names.data(), output_node_names.size());
         std::cout << "output_tensors size: " << output_tensors.size() << std::endl;
 
-        //todo .....
-
         //m_bCheckRun = true;
         std::cout << "Yolov3 runmodel() end....." << std::endl;
     }
@@ -360,7 +371,7 @@ bool Yolov3::runmodel()
     return true;
 }
 
-void Yolov3::DoNms(vector<DetectionRes>& detections)
+void Yolov3::DoNms(vector<DetectionRes>& m_detections)
 {
 	auto iouCompute = [](float * lbox, float* rbox) {
 		float interBox[] = {
@@ -377,44 +388,27 @@ void Yolov3::DoNms(vector<DetectionRes>& detections)
 		return interBoxS / (lbox[2] * lbox[3] + rbox[2] * rbox[3] - interBoxS);
 	};
 
-	sort(detections.begin(), detections.end(), [=](const DetectionRes & left, const DetectionRes & right) {
+	sort(m_detections.begin(), m_detections.end(), [=](const DetectionRes & left, const DetectionRes & right) {
 		return left.prob > right.prob;
 	});
 
 	vector<DetectionRes> result;
-	for (unsigned int m = 0; m < detections.size(); ++m) {
-		result.push_back(detections[m]);
-		for (unsigned int n = m + 1; n < detections.size(); ++n) {
-			if (iouCompute((float *)(&detections[m]), (float *)(&detections[n])) > m_Nmsthreshold) {
-				detections.erase(detections.begin() + n);
+	for (unsigned int m = 0; m < m_detections.size(); ++m) {
+		result.push_back(m_detections[m]);
+		for (unsigned int n = m + 1; n < m_detections.size(); ++n) {
+			if (iouCompute((float *)(&m_detections[m]), (float *)(&m_detections[n])) > m_Nmsthreshold) {
+				m_detections.erase(m_detections.begin() + n);
 				--n;
 			}
 		}
 	}
-	detections = move(result);
+	m_detections = move(result);
 }
 
 bool Yolov3::postProcessing()
 {
     if (m_bCheckPre && m_bInit && m_bCheckInit)
     {
-        yolo_masks_.clear();
-        yolo_anchors_.clear();
-        if (m_Isyolov3tiny)
-        {
-            std::vector<std::vector<int> > yolo_masks{ {3, 4, 5}, {0, 1, 2} };
-            std::vector<std::vector<int> > yolo_anchors{ {10,14}, {23,27}, {37,58}, {81,82}, {135,169}, {344,319} };
-            yolo_masks_.assign(yolo_masks.begin(), yolo_masks.end());
-            yolo_anchors_.assign(yolo_anchors.begin(), yolo_anchors.end());
-        }
-        else
-        {
-            std::vector<std::vector<int> > yolo_masks{ {6, 7, 8}, {3, 4, 5}, {0, 1, 2} };
-            std::vector<std::vector<int> > yolo_anchors{ {10,13}, {16,30}, {33,23}, {30,61}, {62,45}, {59,119}, {116,90}, {156,198}, {373,326} };
-            yolo_masks_.assign(yolo_masks.begin(), yolo_masks.end());
-            yolo_anchors_.assign(yolo_anchors.begin(), yolo_anchors.end());
-        }
-
         //todo ...
         if ( (output_tensors.size()!=output_shapes.size()?true:false) )
         {
@@ -474,12 +468,11 @@ bool Yolov3::postProcessing()
                         float *ptr = transposed_output + offset_c;
                         ptr[4] = sigmoid(ptr[4]); //box_confidence
 
+                        //5-84 box_class_probs
                         for (int cp = 5; cp < shape[3]; cp++)
                         {
                             ptr[cp] = sigmoid(ptr[cp]);
                         }
-
-                        //5-84 box_class_probs
                         // float class_score = max(ptr[4] * ptr[5], ptr[4] * ptr[6]);
                         // for (int cp = 7; cp < shape[3]; cp++)
                         // {

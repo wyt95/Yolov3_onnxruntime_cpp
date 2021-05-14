@@ -11,11 +11,14 @@ int main(int argc, char** argv)
     Yolov3 *yolov3 = new Yolov3();
 
     std::cout << "yolov3 init()" << std::endl;
-    if ( !yolov3->init("../model/yolov3-ykx.onnx", "../model/coco_labels.txt", 608) )
+    if ( !yolov3->init("../model/yolov3-ykx.onnx", "../model/coco_labels.txt", 608) )  //初始化的时间需要1.15-1.20s左右
     {
         std::cout << "yolov3 init() failed...." << std::endl;
         return 0;
     }
+
+    double nTime_init = ((double)getTickCount() - timeStart) / getTickFrequency();
+    cout << "running time init：" << nTime_init << "sec\n" << endl;
 
     std::string AccurayFolderPath = "../pic/";
     for (const auto &entry : fs::directory_iterator(AccurayFolderPath))
@@ -62,8 +65,8 @@ int main(int argc, char** argv)
 
     std::cout << "yolov3 finished...." << std::endl;
 
-    double nTime = ((double)getTickCount() - timeStart) / getTickFrequency();
-    cout << "running time ：" << nTime << "sec\n" << endl;
+    double nTime = ((double)getTickCount() - timeStart) / getTickFrequency(); //单张图片需要1.9s左右 cpu
+    cout << "running time ：" << (nTime - nTime_init) << "sec\n" << endl;
 
     return 0;
 }
