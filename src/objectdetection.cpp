@@ -63,7 +63,17 @@ void Yolov3::setOnnxRuntimeEnv()
     Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CPU(m_OrtSessionOptions, 0));
     #elif defined(USE_CUDA)
     std::cout << "USE_CUDA...." << std::endl;
-    Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CUDA(m_OrtSessionOptions, 0));
+    OrtCUDAProviderOptions cuda_options{
+          0,
+          OrtCudnnConvAlgoSearch::EXHAUSTIVE,
+          std::numeric_limits<size_t>::max(),
+          0,
+          true,
+          0,
+          nullptr,
+          nullptr};
+    m_OrtSessionOptions.AppendExecutionProvider_CUDA(cuda_options);
+    //Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CUDA(m_OrtSessionOptions, 0));
     #endif
 
 }
