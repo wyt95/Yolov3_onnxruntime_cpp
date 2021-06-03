@@ -58,7 +58,14 @@ void Yolov3::setOnnxRuntimeEnv()
     //ORT_ENABLE_ALL seems to have better perforamance
     m_OrtSessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
     //m_OrtSessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
+    #if defined(USE_CPU)
+    std::cout << "USE_CPU...." << std::endl;
     Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CPU(m_OrtSessionOptions, 0));
+    #elif defined(USE_CUDA)
+    std::cout << "USE_CUDA...." << std::endl;
+    Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CUDA(m_OrtSessionOptions, 0));
+    #endif
+
 }
 
 bool Yolov3::setOnnxRuntimeModelInputOutput(int input_size)

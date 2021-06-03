@@ -18,7 +18,11 @@
 #include <memory>
 
 #include <onnxruntime_cxx_api.h>
+#if defined(USE_CPU)
 #include <cpu_provider_factory.h>
+#elif defined(USE_CUDA)
+#include <cuda_provider_factory.h>
+#endif
 //#include <core/providers/tensorrt/tensorrt_provider_factory.h>
 
 #include "NumCpp.hpp"
