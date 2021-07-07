@@ -15,16 +15,15 @@ else()
 endif()
 
 find_package(OpenCV REQUIRED)
-message(status " ======opencv library status======")
-message(status " version: ${opencv_version}")
-message(status " libraries: ${opencv_libs}")
-message(status " include path: ${opencv_include_dirs}")
-message(status " ======opencv library status======")
+message(STATUS "OpenCV library status:")
+message(STATUS "version: ${OpenCV_VERSION}")
+message(STATUS "libraries: ${OpenCV_LIBS}")
+message(STATUS "include path: ${OpenCV_INCLUDE_DIRS}")
 
 FILE(GLOB SRC_LIST_CPP ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
-FILE(GLOB SRC_LIST "src/*.cpp")
-message(STATUS "src_list: ${SRC_LIST}")
+#FILE(GLOB SRC_LIST "src/*.cpp")
+message(STATUS "SRC_LIST_CPP: ${SRC_LIST_CPP}")
 
 INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/include)
@@ -38,6 +37,6 @@ SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
-ADD_EXECUTABLE( demo ${SRC_LIST})
+ADD_EXECUTABLE( demo ${SRC_LIST_CPP})
 
 TARGET_LINK_LIBRARIES( demo ${PROJECT_SOURCE_DIR}/lib/libonnxruntime.so ${OpenCV_LIBS} -lstdc++fs -lboost_filesystem -lboost_system)

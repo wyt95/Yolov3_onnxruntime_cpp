@@ -7,6 +7,36 @@ float exponential(float in) {
 	return exp(in);
 }
 
+template <typename T>
+T vectorProduct(const std::vector<T>& v)
+{
+    return accumulate(v.begin(), v.end(), 1, std::multiplies<T>());
+}
+
+/**
+ * @brief Operator overloading for printing vectors
+ * @tparam T
+ * @param os
+ * @param v
+ * @return std::ostream&
+ */
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)
+{
+    os << "[";
+    for (int i = 0; i < v.size(); ++i)
+    {
+        os << v[i];
+        if (i != v.size() - 1)
+        {
+            os << ", ";
+        }
+    }
+    os << "]";
+    return os;
+}
+
 Yolov3::Yolov3()
 {
     m_bInit = false;
@@ -64,14 +94,14 @@ void Yolov3::setOnnxRuntimeEnv()
     #elif defined(USE_CUDA)
     std::cout << "USE_CUDA...." << std::endl;
     OrtCUDAProviderOptions cuda_options{
-          0,
-          OrtCudnnConvAlgoSearch::EXHAUSTIVE,
-          std::numeric_limits<size_t>::max(),
-          0,
-          true,
-          0,
-          nullptr,
-          nullptr};
+        0,
+        OrtCudnnConvAlgoSearch::DEFAULT,
+        std::numeric_limits<size_t>::max(),
+        0,
+        true,
+        0,
+        nullptr,
+        nullptr};
     m_OrtSessionOptions.AppendExecutionProvider_CUDA(cuda_options);
     //Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CUDA(m_OrtSessionOptions, 0));
     #endif
@@ -106,13 +136,9 @@ bool Yolov3::setOnnxRuntimeModelInputOutput(int input_size)
         ONNXTensorElementDataType type = tensor_info.GetElementType();
 
         // print input shapes/dims
-        std::vector<int64_t> inputNode_dims = tensor_info.GetShape();
-        // std::cout << "Input " << i << " : " << "num_dims = " << inputNode_dims.size() << std::endl;
-        // for (int j = 0; j < inputNode_dims.size(); j++)
-        // {
-        //     printf("Input %d : dim %d=%jd\n", i, j, inputNode_dims[j]);
-        // }
-        input_node_dims.push_back(inputNode_dims);
+        std::vector<int64_t> inputDims = tensor_info.GetShape();
+        std::cout << "Input Dimensions: " << inputDims << std::endl;
+        input_node_dims.push_back(inputDims);
     }
 
     num_out_nodes = m_OrtSession->GetOutputCount();
@@ -132,13 +158,9 @@ bool Yolov3::setOnnxRuntimeModelInputOutput(int input_size)
         auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
 
         // print output shapes/dims
-        std::vector<int64_t> outputNode_dims = tensor_info.GetShape();
-        // std::cout << "output " << i << " : " << "num_dims = " << outputNode_dims.size() << std::endl;
-        // for (int j = 0; j < outputNode_dims.size(); j++)
-        // {
-        //     printf("output %d : dim %d=%jd\n", i, j, outputNode_dims[j]);
-        // }
-        output_node_dims.push_back(outputNode_dims);
+        std::vector<int64_t> outputDims = tensor_info.GetShape();
+        std::cout << "Output Dimensions: " << outputDims << std::endl;
+        output_node_dims.push_back(outputDims);
 
         int batch_size = 1;
         int output_size = (input_size/32)*(pow(2,i));
@@ -314,45 +336,14 @@ bool Yolov3::preProcessing(const cv::Mat &inputImg)
         m_OriMheight = img.rows;
         std::cout << "m_OriMwidth: " << m_OriMwidth << ", " << "m_OriMheight: " << m_OriMheight << std::endl;
         resize(img, img, cv::Size(m_iInput_w, m_iInput_h), cv::INTER_CUBIC);
-        img.convertTo(img, CV_32FC3, 1.f / 255.0);
+        img.convertTo(img, CV_32F, 1.f / 255.0);
 
-        int input_tensor_size = 1;
-        for (auto it : input_node_dims)
-        {
-            for (auto dims : it)
-            {
-                input_tensor_size *= dims;
-            }
-        }
-        input_image_.resize(input_tensor_size);
+        cv::dnn::blobFromImage(img, img);
 
-        float *data = input_image_.data();
-        for (int c = 0; c < 3; c++) {
-            for (int w = 0; w < m_iInput_w; w++) {
-                for (int h = 0; h < m_iInput_h; h++) {
-                    data[c*m_iInput_w*m_iInput_h + w*m_iInput_h + h] = (img.ptr<float>(w)[h*3+c]);
-                }
-            }
-        }
-
-        // //HWC TO CHW
-        // vector<Mat> input_channels(c);
-        // cv::split(img_float, input_channels);
-
-        // vector<float> result(h * w * c);
-        // auto data = result.data();
-        // int channelLength = h * w;
-        // for (int i = 0; i < c; ++i) {
-        //     memcpy(data, input_channels[i].data, channelLength * sizeof(float));
-        //     data += channelLength;
-        // }
-
-        // std::cout << "outputPicData: " << std::endl;
-        // for (int i = 0; i < 608; i++)
-        // {
-        //     std::cout << data[i + 608] << " ";
-        // }
-        // std::cout << '\n';
+        size_t inputTensorSize = vectorProduct(input_node_dims[0]);
+        input_image_.resize(inputTensorSize);
+        input_image_.assign(img.begin<float>(),
+                            img.end<float>());
 
         m_bCheckPre = true;
     } catch(const std::exception& ex) {
