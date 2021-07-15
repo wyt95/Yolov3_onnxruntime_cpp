@@ -39,4 +39,4 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
 ADD_EXECUTABLE( demo ${SRC_LIST_CPP})
 
-TARGET_LINK_LIBRARIES( demo ${PROJECT_SOURCE_DIR}/lib/libonnxruntime.so ${OpenCV_LIBS} -lstdc++fs -lboost_filesystem -lboost_system)
+TARGET_LINK_LIBRARIES( demo ${LIBRARY_OUTPUT_PATH} ${OpenCV_LIBS} -lstdc++fs -lboost_filesystem -lboost_system)
