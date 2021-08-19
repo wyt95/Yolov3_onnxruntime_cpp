@@ -74,8 +74,6 @@ int main(int argc, char** argv)
 
     t8 = std::chrono::high_resolution_clock::now();
 
-    delete yolov3;
-
     std::cout << "yolov3 finished...." << std::endl;
 
     diff1 = std::chrono::duration<double, std::milli>(t1 - t0).count();//计时init
@@ -98,6 +96,8 @@ int main(int argc, char** argv)
 
     diff7 = std::chrono::duration<double, std::milli>(t8 - t0).count();//计时 -> GPU: 1.91(s/pic) CPU: 2.55(s/pic)
     cout << "running time: " << diff7 << "ms\n" << endl;
+
+    delete yolov3;
 
     return 0;
 }

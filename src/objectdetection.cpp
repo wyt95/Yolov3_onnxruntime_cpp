@@ -51,22 +51,6 @@ Yolov3::Yolov3()
     outputs_reshaped.clear();
 }
 
-Yolov3::~Yolov3()
-{
-    //release();
-    if (m_bCheckInit)
-    {
-        m_OrtSession.reset();
-        m_OrtEnv.reset();
-
-        m_bInit = false;
-        m_bCheckInit = false;
-        m_bCheckPre = false;
-
-        std::cout << "free all...." << std::endl;
-    }
-}
-
 void Yolov3::release()
 {
     if (m_bCheckInit)
@@ -104,6 +88,38 @@ void Yolov3::setOnnxRuntimeEnv()
         nullptr};
     m_OrtSessionOptions.AppendExecutionProvider_CUDA(cuda_options);
     //Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CUDA(m_OrtSessionOptions, 0));
+    #elif defined(USE_TRT)
+    std::cout << "USE_TRT...." << std::endl;
+    OrtTensorRTProviderOptions tensorrt_options{
+            0,
+            0,
+            nullptr,
+            1000,
+            1,
+            1 << 30,
+            0,
+            0,
+            nullptr,
+            0,
+            0,
+            0,
+            0,
+            0,
+            nullptr,
+            0,
+            nullptr,
+            0};
+    m_OrtSessionOptions.AppendExecutionProvider_TensorRT(tensorrt_options);
+    OrtCUDAProviderOptions cuda_options{
+        0,
+        OrtCudnnConvAlgoSearch::DEFAULT,
+        std::numeric_limits<size_t>::max(),
+        0,
+        true,
+        0,
+        nullptr,
+        nullptr};
+    m_OrtSessionOptions.AppendExecutionProvider_CUDA(cuda_options);
     #endif
 
 }
@@ -481,24 +497,16 @@ bool Yolov3::postProcessing()
                         {
                             ptr[cp] = sigmoid(ptr[cp]);
                         }
-                        // float class_score = max(ptr[4] * ptr[5], ptr[4] * ptr[6]);
-                        // for (int cp = 7; cp < shape[3]; cp++)
-                        // {
-                        //     class_score = max(class_score, ptr[4] * ptr[cp]);
-                        // }
-                        int maxclassPos = 0;
-                        float class_score = ptr[4] * ptr[5];
-                        for (int cp = 5; cp < shape[3]; cp++)
-                        {
-                            if (class_score < ptr[4] * ptr[cp])
-                            {
-                                class_score = ptr[4] * ptr[cp];
-                                maxclassPos = cp - 5;
-                            }
-                        }
+
+                        //float class_score = ptr[4] * ptr[5];
+                        std::vector<float> clasScorVec{ptr+5, ptr+85};
+                        auto maxPos = std::max_element(clasScorVec.begin(), clasScorVec.end());
+                        float class_score = ptr[4] * ptr[maxPos-clasScorVec.begin()+5];
 
                         if (class_score < m_threshold)
                             continue;
+
+                        int maxclassPos = maxPos-clasScorVec.begin();
 
                         ptr[0] = sigmoid(ptr[0]); //x
                         ptr[1] = sigmoid(ptr[1]); //y

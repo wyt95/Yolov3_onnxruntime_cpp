@@ -23,8 +23,10 @@
 #include <cpu_provider_factory.h>
 #elif defined(USE_CUDA)
 #include <cuda_provider_factory.h>
+#elif defined(USE_TRT)
+#include <tensorrt_provider_factory.h>
 #endif
-//#include <core/providers/tensorrt/tensorrt_provider_factory.h>
+#include <core/common/common.h>
 
 #include "NumCpp.hpp"
 
@@ -117,7 +119,20 @@ private:
 
 public:
     Yolov3();
-    virtual ~Yolov3();
+    ~Yolov3() {
+        if (m_bCheckInit)
+        {
+            m_OrtSession.reset();
+            m_OrtEnv.reset();
+
+            m_bInit = false;
+            m_bCheckInit = false;
+            m_bCheckPre = false;
+
+            std::cout << "free all...." << std::endl;
+        }
+    }
+    //~Yolov3() = default;
 
     void release();
 
@@ -134,6 +149,8 @@ public:
 
     //draw boxes
     bool DrowBoxes(cv::Mat &inputImg, const std::string image_id);
+
+    ORT_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(Yolov3);
 };
 
 #endif
