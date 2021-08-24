@@ -94,8 +94,8 @@ int main(int argc, char** argv)
     diff6 = std::chrono::duration<double, std::milli>(t7 - t6).count();//计时DrowBoxes
     cout << "running time DrowBoxes: " << diff6 << "ms\n" << endl;
 
-    diff7 = std::chrono::duration<double, std::milli>(t8 - t0).count();//计时 -> GPU: 1.91(s/pic) CPU: 2.55(s/pic)
-    cout << "running time: " << diff7 << "ms\n" << endl;
+    diff7 = std::chrono::duration<double, std::milli>(t7 - t1).count();//计时 -> GPU: 0.73-0.75(s/pic) CPU: 2.55(s/pic)
+    cout << "running time without model-loading: " << diff7 << "ms\n" << endl;
 
     delete yolov3;
 

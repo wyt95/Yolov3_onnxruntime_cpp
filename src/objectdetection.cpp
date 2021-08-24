@@ -66,7 +66,10 @@ void Yolov3::release()
 
 void Yolov3::setOnnxRuntimeEnv()
 {
-    m_OrtEnv = std::make_unique<Ort::Env>(Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test"));
+    //m_OrtEnv = std::make_unique<Ort::Env>(Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test"));
+    m_OrtEnv = Ort::Env(ORT_LOGGING_LEVEL_VERBOSE, "test");
+
+    Ort::SessionOptions m_OrtSessionOptions;
 
     m_OrtSessionOptions.SetIntraOpNumThreads(1);
     //ORT_ENABLE_ALL seems to have better perforamance
@@ -122,6 +125,9 @@ void Yolov3::setOnnxRuntimeEnv()
     m_OrtSessionOptions.AppendExecutionProvider_CUDA(cuda_options);
     #endif
 
+    //m_OrtSession = std::make_unique<Ort::Session>(Ort::Session(*m_OrtEnv, m_sModelOnnxPath.c_str(), m_OrtSessionOptions));
+    m_OrtSession = Ort::Session(m_OrtEnv, m_sModelOnnxPath.c_str(), m_OrtSessionOptions);
+
 }
 
 bool Yolov3::setOnnxRuntimeModelInputOutput(int input_size)
@@ -132,7 +138,7 @@ bool Yolov3::setOnnxRuntimeModelInputOutput(int input_size)
         return false;
     }
 
-    num_input_nodes = m_OrtSession->GetInputCount();
+    num_input_nodes = m_OrtSession.GetInputCount();
     input_node_names = std::vector<const char *>(num_input_nodes);
 
     // print model input layer (node names, types, shape etc.)
@@ -141,12 +147,12 @@ bool Yolov3::setOnnxRuntimeModelInputOutput(int input_size)
     for (int i = 0; i < num_input_nodes; i++) 
     {
         // print input node names
-        char* input_name = m_OrtSession->GetInputName(i, allocator);
+        char* input_name = m_OrtSession.GetInputName(i, allocator);
         std::cout << "Input " << i << " : " << "name = " << input_name << std::endl;
         input_node_names[i] = input_name;
 
         // print input node types
-        Ort::TypeInfo type_info = m_OrtSession->GetInputTypeInfo(i);
+        Ort::TypeInfo type_info = m_OrtSession.GetInputTypeInfo(i);
         auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
 
         ONNXTensorElementDataType type = tensor_info.GetElementType();
@@ -157,7 +163,7 @@ bool Yolov3::setOnnxRuntimeModelInputOutput(int input_size)
         input_node_dims.push_back(inputDims);
     }
 
-    num_out_nodes = m_OrtSession->GetOutputCount();
+    num_out_nodes = m_OrtSession.GetOutputCount();
     output_node_names = std::vector<const char *>(num_out_nodes);
 
     std::cout << "Number of outputs :" << num_out_nodes << std::endl;
@@ -165,12 +171,12 @@ bool Yolov3::setOnnxRuntimeModelInputOutput(int input_size)
     for (int i = 0; i < num_out_nodes; i++) 
     {
         // print output node names
-        char* output_name = m_OrtSession->GetOutputName(i, allocator);
+        char* output_name = m_OrtSession.GetOutputName(i, allocator);
         std::cout << "output " << i << " : " << "name = " << output_name << std::endl;
         output_node_names[i] = output_name;
 
         // print output node types
-        Ort::TypeInfo type_info = m_OrtSession->GetOutputTypeInfo(i);
+        Ort::TypeInfo type_info = m_OrtSession.GetOutputTypeInfo(i);
         auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
 
         // print output shapes/dims
@@ -186,17 +192,6 @@ bool Yolov3::setOnnxRuntimeModelInputOutput(int input_size)
         output_shapes.push_back(output_shape);
     }
 
-    return true;
-}
-
-bool Yolov3::setSession()
-{
-    if ((m_sModelOnnxPath.length() == 0) || (m_OrtEnv == nullptr))
-    {
-        std::cerr << "m_sModelOnnxPath is null or m_OrtEnv nullptr !!" << '\n';
-        return false;
-    }
-    m_OrtSession = std::make_unique<Ort::Session>(Ort::Session(*m_OrtEnv, m_sModelOnnxPath.c_str(), m_OrtSessionOptions));
     return true;
 }
 
@@ -290,12 +285,6 @@ bool Yolov3::init(const std::string modelPathOnnx, const std::string labelFilePa
                 //OnnxRuntime set Env
                 setOnnxRuntimeEnv();
 
-                if (!setSession())
-                {
-                    std::cerr << "setSession() failed!!" << '\n';
-                    return false;
-                }
-
                 //model input output
                 if (!setOnnxRuntimeModelInputOutput(input_size))
                 {
@@ -379,7 +368,7 @@ bool Yolov3::runmodel()
         auto input_tenser = Ort::Value::CreateTensor<float>(memory_info, input_image_.data(), input_image_.size(), \
                                                                     input_shape.data(), input_shape.size());
 
-        output_tensors = m_OrtSession->Run(Ort::RunOptions{nullptr}, input_node_names.data(), &input_tenser, input_node_names.size(), \
+        output_tensors = m_OrtSession.Run(Ort::RunOptions{nullptr}, input_node_names.data(), &input_tenser, input_node_names.size(), \
                                                     output_node_names.data(), output_node_names.size());
         std::cout << "output_tensors size: " << output_tensors.size() << std::endl;
 
@@ -574,7 +563,7 @@ bool Yolov3::DrowBoxes(cv::Mat &inputImg, const std::string image_name)
             clspos = box.classpos;
         cv::Rect rect = { x, y, w, h };
         cv::rectangle(inputImg, rect, cv::Scalar(0, 0, 255), 2);
-        char boxProb[64] = "";
+        char boxProb[64];
         sprintf(boxProb, "%.2f", box.prob);
         std::string category= m_Categories[box.classpos] + ":" + boxProb;
         cv::putText(inputImg,

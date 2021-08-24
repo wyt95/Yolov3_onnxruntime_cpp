@@ -46,7 +46,6 @@ private:
     //set onnxruntime env value
     void setOnnxRuntimeEnv();
     bool setOnnxRuntimeModelInputOutput(int input_size);
-    bool setSession();
 
     //get label's name
     bool GetLabelAndCategories(std::string labelFilePath);
@@ -60,11 +59,12 @@ private:
 private:
 
     //ONNX RUNTIME
-    Ort::SessionOptions m_OrtSessionOptions;
     Ort::AllocatorWithDefaultOptions allocator;
 
-    std::unique_ptr<Ort::Session> m_OrtSession;
-    std::unique_ptr<Ort::Env> m_OrtEnv;
+    //std::unique_ptr<Ort::Session> m_OrtSession;
+    //std::unique_ptr<Ort::Env> m_OrtEnv;
+    Ort::Session m_OrtSession{nullptr};
+    Ort::Env m_OrtEnv{nullptr};
 
     //onnxModlPath
     std::string m_sModelOnnxPath;
@@ -122,8 +122,8 @@ public:
     ~Yolov3() {
         if (m_bCheckInit)
         {
-            m_OrtSession.reset();
-            m_OrtEnv.reset();
+            //m_OrtSession.reset();
+            //m_OrtEnv.reset();
 
             m_bInit = false;
             m_bCheckInit = false;
